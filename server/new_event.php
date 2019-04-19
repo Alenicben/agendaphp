@@ -1,40 +1,34 @@
 <?php
-require('Conecta.php');
-session_start();
-if (isset($_SESSION['usuario'])) {
-    $con = new Conecta();
-    if ($con -> conexion_abrir() == 'OK') {
-        $resultado = $con -> consultar_todo(['usuario'], ['idusuario'], "WHERE usuario ='" . $_SESSION['usuario'] . "'");
-        $fila = $resultado -> fetch_assoc();
-        $idusuario = $fila['idusuario'];
-        $titulo = filter_input(INPUT_POST, 'titulo');
-        $fecha_inicio = filter_input(INPUT_POST, 'start_date');
-        $hora_inicio = filter_input(INPUT_POST, 'start_hour');
-        $fecha_fin = filter_input(INPUT_POST, 'end_date');
-        $hora_fin = filter_input(INPUT_POST, 'end_hour');
-        $dia_completo = filter_input(INPUT_POST, 'allDay');
-        if ($dia_completo == false) {
-            $dia_completo = 1;
-        } else {
-            $dia_completo = 0;
+require('./conector.php');
+/*enviar los parámertos de conexión mysqli*/
+$con = new ConectorBD();
+/*Conectarse a la base de datos agenda_db*/
+$response['conexion'] = $con->initConexion($con->database);
+if($response['conexion'] == 'OK'){
+    /*Generar un arreglo con la información a enviar*/
+    $data['titulo'] = '"'.$_POST['titulo'].'"';
+    $data['fecha_inicio'] = '"'.$_POST['start_date'].'"';
+    $data['hora_inicio'] = '"'.$_POST['start_hour'].':00"';/*Add ":00" to fill datetime format*/
+    $data['fecha_fin'] = '"'.$_POST['end_date'].'"';
+    $data['hora_fin'] = '"'.$_POST['end_hour'].':00"'; /*Add ":00" to fill datetime format*/
+    $data['allday'] = $_POST['allDay'];
+    $data['fk_usuarios'] = '"'.$_SESSION['email'].'"';
+    /*Enviar los parámetros de inserción de información a la tabla eventos*/
+    if($con->insertData('eventos', $data)){ //Insertar la información en la base de datos
+        /*Mostrar mensaje success*/
+        $resultado = $con->consultar(['eventos'],['MAX(id)']); //Obtener el id registrado perteneciente al nuevo registro
+        while($fila = $resultado->fetch_assoc()){
+          $response['id']=$fila['MAX(id)']; //Enviar ultimo Id guardado como parámetro para el calendario
         }
-        $actividad['titulo'] = "'" . $titulo . "'";
-        $actividad['fecha_inicio'] = "'" . $fecha_inicio . "'";
-        $actividad['hora_inicio'] = "'" . $hora_inicio . "'";
-        $actividad['fecha_fin'] = "'" . $fecha_fin . "'";
-        $actividad['hora_fin'] = "'" . $hora_fin . "'";
-        $actividad['dia_completo'] = "'" . $dia_completo . "'";
-        $actividad['idusuario'] = $idusuario;
-        if ($con -> agregar_registro('actividad', $actividad)) {
-            $response['msg'] = "OK";
-        } else {
-            $response['msg'] = "Error al agregar actividad";
-        }
-        echo json_encode($response);
-        $con -> conexion_cerrar();
-    } else {
-        echo "Se presentó un error en la conexión";
+        $response['msg'] = 'OK';
+    }else{
+        /*Mostrar mensaje de error*/
+        $response['msg'] = "Ha ocurrido un error al guardar el evento";
     }
-} else {
-    $response['msg'] = "No se ha iniciado una sesión";
+}else{
+    /*Mostrar mensaje de error*/
+    $response['msg'] = "Error en la comunicacion con la base de datos";
 }
+/*devolver el arreglo response en formato json*/
+echo json_encode($response);
+?>

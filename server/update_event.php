@@ -1,38 +1,27 @@
 <?php
-require('Conecta.php');
-session_start();
-if (isset($_SESSION['usuario'])) {
-    $con = new Conecta();
-    if ($con->conexion_abrir() == 'OK') {
-        $idusuario = filter_input(INPUT_POST, 'id');
-        $titulo = filter_input(INPUT_POST, 'title');
-        $titulo_anterior = filter_input(INPUT_POST, 'title_anterior');
-        $start_date = filter_input(INPUT_POST, 'start_date');
-        $start_hour = filter_input(INPUT_POST, 'start_hour');
-        $end_date = filter_input(INPUT_POST, 'end_date');
-        $end_hour = filter_input(INPUT_POST, 'end_hour');
-        $actividad = $con ->consultar_todo(['actividad'], ['idactividad'], 'WHERE idusuario=' . $idusuario . ' and titulo="' . $titulo_anterior . '"');
-        $idactividad = '';
-        if($actividad->num_rows > 0) {
-            $fila = $actividad->fetch_assoc();
-            $idactividad = $fila['idactividad'];
-        }
-        $condition = "idactividad = " . $idactividad ."  AND idusuario = '" . $idusuario . "'";
-        $data['titulo'] = "'" . $titulo . "'";
-        $data['fecha_inicio'] = "'" . $start_date . "'";
-        $data['hora_inicio'] = "'" . $start_hour . "'";
-        $data['fecha_fin'] = "'" . $end_date . "'";
-        $data['hora_fin'] = "'". $end_hour . "'";
-        if ($con->actualizar_registro('actividad', $data, $condition)) {
-            $response['msg'] = "OK";
-        } else {
-            $response['msg'] = "Error al actualizar la actividad";
-        }
-        echo json_encode($response);
-        $con->conexion_cerrar();
-    }else {
-        echo "Se presentó un error en la conexión";
-    }
-}else {
-    $response['msg'] = "No se ha iniciado una sesión";
-}
+ 	require('./conector.php');
+		/*enviar los parámertos de conexión mysqli*/
+		$con = new ConectorBD();
+		/*Conectarse a la base de datos agenda_db*/
+		$response['conexion'] = $con->initConexion($con->database);
+		if($response['conexion'] == 'OK'){
+				
+				$data['id'] = '"'.$_POST['id'].'"';
+			    $data['fecha_inicio'] = '"'.$_POST['start_date'].'"';
+			    $data['hora_inicio'] = '"'.$_POST['start_hour'].'"';
+			    $data['fecha_finalizacion'] = '"'.$_POST['end_date'].'"';
+			    $data['hora_finalizacion'] = '"'.$_POST['end_hour'].'"';
+					if($data['id'] != 'undefined'){
+						$resultado = $con->actualizarRegistro('eventos', $data, 'id ='.$data['id']); //Actualizar el registro que coincida con el id del evento a actualizar
+						$response['msg'] = 'OK';
+					}else{
+						$response['msg'] = "Ha ocurrido un error al actualizar el evento";
+					}
+		}else{
+		    /*Mostrar mensaje de error*/
+		    $response['msg'] = "Error en la comunicacion con la base de datos";
+		}
+		/*devolver el arreglo response en formato json*/
+		echo json_encode($response);
+	$con->cerrarConexion()
+ ?>

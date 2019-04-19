@@ -1,25 +1,33 @@
 <?php
-require('Conecta.php');
-$usuario = filter_input(INPUT_POST, 'username');
-$contrasenia = filter_input(INPUT_POST, 'password');
-$conecto = new Conecta();
-$response = [ ];
-if ($conecto -> conexion_abrir() == 'OK') {
-    $usuarios_lista = $conecto -> consultar_todo(['usuario'], ['usuario', 'contrasenia'], 'WHERE usuario="'. $usuario .'"');
-    if ($usuarios_lista->num_rows != 0) {
-        $fila = $usuarios_lista -> fetch_assoc();
-        if (password_verify($contrasenia, $fila['contrasenia'])) {
-            $response['mensaje'] = 'OK';
-            session_start();
-            $_SESSION['usuario'] = $fila['usuario'];
-        } else {
-            $response['mensaje'] = 'Contraseña incorrecta';
-            $response['acceso'] = 'rechazado';
-        }
-    } else {
-        $response['mensaje'] = 'Usuario incorrecto';
-        $response['acceso'] = 'rechazado';
-    }
-}
-echo json_encode($response);
-$conecto -> conexion_cerrar();
+	require('conector.php');
+	$con = new conectorBD();
+	$response['conexion'] = $con->initConexion($con->database);
+	if(isset($_SESSION['email'])){
+		$response['msg'] = 'OK';
+		$response['acceso'] = 'Autorizado';
+	}else{
+		if ($response['conexion']== 'OK') {
+			if($con->verifyUsers() > 0){
+				$resultado_consulta = $con->consultar(['usuarios'],['email','password'], 'WHERE email="'.$_POST['username'].'"');
+			if ($resultado_consulta->num_rows != 0) {
+				$fila = $resultado_consulta->fetch_assoc();
+				if (password_verify($_POST['password'],$fila['password'])) {
+					$response['msg'] = 'OK';
+					$response['acceso'] = 'Autorizado';
+					$_SESSION['email'] = $fila['email'];
+				}else{
+					$response['msg'] = 'Contraseña Incorrecta';
+					$response['acceso'] = 'acceso denegado';
+					}
+				}else{
+					$response['msg'] = 'Email Incorrecto';
+					$response['acceso'] = 'acceso denegado';
+					}
+				}else{
+					$response['conexion'] = 'No se pudo Inciar la Sesion';
+				}
+			}
+		}
+		echo json_encode($response);
+	$con->cerrarConexion();
+ ?>
